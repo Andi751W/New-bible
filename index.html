@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E3A33B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bibelverse">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Bibelverse nach Gefühlen, Lutherbibel 1912">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Bibelverse für die Seele</title>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
+<style>
+/* Layout: schmale Spalte. Zuerst Anmeldung, danach Begrüßung, sechs gleich große Gefühls-Buttons, Vers-Karte, Lieblingsverse, Erinnerungen. Hintergrund von Bernstein zu Sand. */
+:root {
+  --amber: #E3A33B;
+  --amber-soft: #EDC172;
+  --sand: #F3E2BF;
+  --sand-light: #FAF1DD;
+  --ink: #3B2A14;
+  --ink-soft: #6A5232;
+  --heart: #C2354B;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { background: var(--sand); }
+body {
+  margin: 0; min-height: 100%;
+  background: var(--sand);
+  background-image: linear-gradient(175deg, var(--amber) 0%, var(--amber-soft) 28%, var(--sand) 70%, var(--sand-light) 100%);
+  background-attachment: fixed;
+  color: var(--ink); font-family: var(--font-ui); font-size: 16px;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 32px;
+}
+main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+[hidden] { display: none !important; }
+header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+.cross { display: block; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1.05; text-wrap: balance; }
+h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.6rem; line-height: 1.15; text-wrap: balance; }
+.lead { margin: 0; font-size: 1.05rem; max-width: 46ch; }
+.hint { margin: 0; color: var(--ink-soft); font-size: .92rem; max-width: 62ch; }
+
+.panel { background: var(--sand-light); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 10px 30px rgba(120,80,20,.14); min-width: 0; }
+#app { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+
+/* Anmeldung */
+.login { max-width: 520px; width: 100%; margin: 0 auto; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label { font-weight: 700; font-size: .9rem; }
+.field input { font: 500 1rem var(--font-ui); padding: 12px 14px; border-radius: 12px; border: 2px solid #C9B089; background: #FFFBF2; color: var(--ink); min-width: 0; width: 100%; }
+.field input:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+.names { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 460px) { .names { grid-template-columns: 1fr; } }
+.error { margin: 0; color: #8E2412; font-weight: 700; font-size: .92rem; min-height: 1.2em; }
+
+/* Begrüßung */
+.greet { display: flex; flex-direction: column; gap: 6px; text-align: center; align-items: center; }
+.greet h2 { font-size: clamp(1.8rem, 5.5vw, 2.5rem); }
+
+.remind { background: var(--ink); color: var(--sand-light); border-radius: 16px; padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.remind p { margin: 0; font-weight: 700; }
+
+/* Gefühls-Buttons: gleiche Größe, weicher dunklerer Rand, gewählt = 10 % größer mit Schatten rechts und unten */
+.moods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 16px; padding: 8px 0; margin: 0; }
+@media (max-width: 520px) { .moods { grid-template-columns: repeat(2, 1fr); } }
+.mood {
+  --cd: color-mix(in srgb, var(--c) 84%, #000);
+  appearance: none; border: 0; cursor: pointer; height: 70px; padding: 10px 14px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  background: var(--c); color: var(--on);
+  font: 700 1rem/1.2 var(--font-ui); text-wrap: balance;
+  box-shadow: inset 0 0 14px 3px var(--cd);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+@media (max-width: 520px) { .mood:last-child { grid-column: 1 / -1; justify-self: center; width: calc(50% - 8px); } }
+.mood:hover { filter: brightness(1.05); }
+.mood:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.mood[aria-pressed="true"] { transform: scale(1.1); box-shadow: inset 0 0 14px 3px var(--cd), 5px 5px 9px rgba(40,25,5,.38); }
+
+/* Vers-Karte */
+.verse-card { background: var(--sand-light); border: 2px solid var(--c); border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(120,80,20,.16); }
+.verse-top { background: var(--c); color: var(--on); padding: 12px 22px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: .82rem; }
+.verse-body { padding: 28px 24px 12px; }
+blockquote { margin: 0; }
+.verse-text { margin: 0; font-family: var(--font-display); font-size: clamp(1.4rem, 4.6vw, 2rem); line-height: 1.35; text-wrap: pretty; }
+.verse-ref { display: inline-block; margin-top: 18px; padding: 5px 12px; border-radius: 999px; background: var(--c); color: var(--on); font-weight: 700; font-size: .92rem; }
+.verse-src { display: inline-block; margin: 18px 0 0 12px; color: var(--ink); font-weight: 500; font-size: .9rem; text-decoration: underline; text-underline-offset: 3px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 8px 24px 24px; }
+.actions { padding-bottom: 24px; }
+.blessing { --fl: #7E5FA6; --gold: #FFD65A; min-width: 0; }
+.blessing > summary {
+  list-style: none; cursor: pointer; width: 100%; min-height: 60px; padding: 12px 20px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 12px; text-align: center;
+  background: var(--fl); color: var(--gold); font: 700 1.2rem/1.2 var(--font-ui);
+  box-shadow: inset 0 0 14px 3px color-mix(in srgb, var(--fl) 84%, #000);
+}
+.blessing > summary::-webkit-details-marker { display: none; }
+.blessing > summary::after { content: ""; width: 9px; height: 9px; border-right: 3px solid currentColor; border-bottom: 3px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform .2s ease; flex: none; }
+.blessing[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+.blessing > summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.blessing-body { margin-top: 10px; background: var(--sand-light); border-radius: 20px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px rgba(120,80,20,.14); }
+.blessing-text { margin: 0; font-family: var(--font-display); font-style: italic; font-size: clamp(1.3rem, 4.2vw, 1.7rem); line-height: 1.45; }
+.blessing-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .9rem; }
+.blessing-ref { font-weight: 700; }
+.blessing-meta a { color: var(--ink); }
+.btn { appearance: none; cursor: pointer; font: 700 .95rem var(--font-ui); padding: 10px 18px; border-radius: 999px; border: 2px solid var(--ink); background: transparent; color: var(--ink); display: inline-flex; align-items: center; gap: 8px; }
+.btn.primary { background: var(--ink); color: var(--sand-light); }
+.btn:hover { filter: brightness(1.15); }
+.btn:focus-visible, .verse-src:focus-visible, .cal:focus-visible, .linkbtn:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.heart svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+.heart[aria-pressed="true"] { background: var(--heart); border-color: var(--heart); color: #fff; }
+.heart[aria-pressed="true"] svg { fill: currentColor; }
+.fade { animation: fade .45s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Lieblingsverse */
+.favs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.fav { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: start; padding-top: 12px; border-top: 1px solid #DCC8A0; }
+.fav:first-child { border-top: 0; padding-top: 0; }
+.fav p { margin: 0; font-family: var(--font-display); font-size: 1.2rem; line-height: 1.35; min-width: 0; }
+.fav .meta { grid-column: 1; font-size: .88rem; font-weight: 700; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.fav .meta a { color: var(--ink); font-weight: 500; }
+.unheart { appearance: none; border: 0; background: transparent; color: var(--heart); cursor: pointer; padding: 6px; border-radius: 10px; }
+.unheart svg { width: 22px; height: 22px; fill: currentColor; display: block; }
+.unheart:focus-visible { outline: 3px solid var(--ink); }
+
+/* Erinnerungen */
+.rem-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px 0; border-top: 1px solid #DCC8A0; }
+.rem-row:first-of-type { border-top: 0; }
+.rem-row .name { display: flex; align-items: center; gap: 10px; font-weight: 700; min-width: 130px; }
+.rem-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--ink); }
+.rem-row input[type="time"] { font: 500 1rem var(--font-ui); padding: 8px 10px; border-radius: 10px; border: 2px solid #C9B089; background: #FFFBF2; color: var(--ink); }
+.rem-row input[type="time"]:focus-visible { outline: 3px solid var(--ink); }
+.cal { color: var(--ink); font-size: .92rem; }
+.rem-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+#notif-status { font-size: .9rem; color: var(--ink-soft); }
+
+.fold { background: var(--sand-light); border-radius: 20px; box-shadow: 0 10px 30px rgba(120,80,20,.14); min-width: 0; }
+.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 22px; border-radius: 20px; font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; line-height: 1.15; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: ""; width: 12px; height: 12px; border-right: 3px solid var(--ink); border-bottom: 3px solid var(--ink); transform: rotate(45deg); transition: transform .2s ease; margin-right: 4px; flex: none; }
+.fold[open] > summary::after { transform: rotate(-135deg); }
+.fold > summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.fold-body { padding: 0 22px 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+footer { color: var(--ink-soft); font-size: .85rem; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+footer a { color: var(--ink); }
+.legal { gap: 10px; }
+.legal p { margin: 0; line-height: 1.5; }
+.legal h3 { margin: 6px 0 0; font-size: 1.05rem; }
+.legal .btn { align-self: flex-start; margin-top: 6px; }
+.ph { background: #FFEFA8; border-radius: 4px; padding: 0 4px; font-weight: 500; }
+.legal-links { display: flex; gap: 14px; }
+.linkbtn { appearance: none; border: 0; background: transparent; font: 700 .9rem var(--font-ui); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 4px; }
+@media (prefers-reduced-motion: reduce) { .fade { animation: none; } .mood { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg class="cross" viewBox="0 0 64 80" width="44" height="56" aria-hidden="true"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A5208"/><stop offset="1" stop-color="#5A3205"/></linearGradient></defs><rect x="27" y="2" width="10" height="76" rx="2" fill="url(#cg)"/><rect x="8" y="22" width="48" height="10" rx="2" fill="url(#cg)"/></svg>
+    <h1>Bibelverse für die Seele</h1>
+  </header>
+
+  <section class="panel login" id="login" aria-labelledby="login-h">
+    <h2 id="login-h">Willkommen</h2>
+    <p class="hint">Melde dich an, damit ich dich mit deinem Vornamen begrüßen kann. Deine Angaben bleiben in diesem Browser gespeichert und werden nirgends hingeschickt.</p>
+    <form id="login-form" novalidate>
+      <div class="names">
+        <div class="field"><label for="first">Vorname</label><input id="first" name="first" type="text" autocomplete="given-name" required></div>
+        <div class="field"><label for="last">Nachname</label><input id="last" name="last" type="text" autocomplete="family-name" required></div>
+      </div>
+      <div class="field" style="margin-top:12px"><label for="email">E-Mail-Adresse</label><input id="email" name="email" type="email" autocomplete="email" inputmode="email" required></div>
+      <p class="error" id="login-error" role="alert"></p>
+      <button class="btn primary" type="submit" id="login-btn">Anmelden</button>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+    <div class="greet">
+      <h2 id="greet"></h2>
+      <p class="lead" id="ask"></p>
+      <p class="lead" id="ask2">Schau, wie Dir Gott helfen kann...</p>
+    </div>
+
+    <div class="remind" id="remind" role="status" hidden>
+      <p id="remind-text"></p>
+      <button class="btn" id="remind-close" type="button" style="color:var(--sand-light);border-color:var(--sand-light)">Schließen</button>
+    </div>
+
+    <nav class="moods" id="moods" aria-label="Gefühl auswählen"></nav>
+
+    <section class="verse-card" id="card" aria-live="polite">
+      <div class="verse-top"><span id="mood-name"></span></div>
+      <div class="verse-body fade" id="body">
+        <blockquote>
+          <p class="verse-text" id="text"></p>
+          <span class="verse-ref" id="ref"></span>
+          <a class="verse-src" id="src" href="#" target="_blank" rel="noopener">Bei der Bibelgesellschaft nachlesen</a>
+        </blockquote>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="next" type="button">Nächster Vers</button>
+        <button class="btn heart" id="heart" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.7 4.5 6.4 4.5c2 0 3.5 1.1 4.3 2.4h2.6c.8-1.3 2.3-2.4 4.3-2.4 3.7 0 5.6 3.8 4 7.3C19.5 16.4 12 21 12 21z" stroke-linejoin="round"/></svg><span id="heart-label">Gefällt mir</span></button>
+        <button class="btn" id="copy" type="button">Vers kopieren</button>
+      </div>
+    </section>
+
+    <details class="blessing" id="blessing">
+      <summary>Gott segne Dich</summary>
+      <div class="blessing-body">
+        <p class="blessing-text">Der HERR segne dich und behüte dich;<br>der HERR lasse sein Angesicht leuchten über dir und sei dir gnädig;<br>der HERR hebe sein Angesicht über dich und gebe dir Frieden.</p>
+        <p class="blessing-meta"><span class="blessing-ref">4. Mose 6,24–26</span><a href="https://www.die-bibel.de/bibel/LU12/NUM.6" target="_blank" rel="noopener">Bei der Bibelgesellschaft nachlesen</a></p>
+      </div>
+    </details>
+
+    <details class="fold" id="favs-box">
+      <summary>Meine Lieblingsverse<span id="fav-count"></span></summary>
+      <div class="fold-body">
+        <p class="hint" id="fav-empty">Tippe bei einem Vers auf „Gefällt mir“, dann erscheint er hier.</p>
+        <ul class="favs" id="favs"></ul>
+      </div>
+    </details>
+
+    <details class="fold" id="reminders">
+      <summary>Erinnerungen</summary>
+      <div class="fold-body">
+      <p class="hint">Voreingestellt sind 7:00 Uhr morgens und 21:00 Uhr abends. Du kannst die Uhrzeiten ändern oder eine Erinnerung ausschalten.</p>
+      <div class="rem-row">
+        <label class="name"><input type="checkbox" id="rem-morning-on"> Morgens</label>
+        <input type="time" id="rem-morning-time" aria-label="Uhrzeit morgens">
+        <a class="cal" id="rem-morning-cal" href="#" target="_blank" rel="noopener">Täglich im Kalender eintragen</a>
+      </div>
+      <div class="rem-row">
+        <label class="name"><input type="checkbox" id="rem-evening-on"> Abends</label>
+        <input type="time" id="rem-evening-time" aria-label="Uhrzeit abends">
+        <a class="cal" id="rem-evening-cal" href="#" target="_blank" rel="noopener">Täglich im Kalender eintragen</a>
+      </div>
+      <div class="rem-actions">
+        <button class="btn" id="notif-btn" type="button">Hinweise im Browser erlauben</button>
+        <span id="notif-status"></span>
+      </div>
+      <p class="hint">Diese Seite kann keine Erinnerungen in die Benachrichtigungseinstellungen deines Geräts legen. Solange sie geöffnet ist, erscheint zur eingestellten Zeit ein Hinweis. Der Kalender-Link trägt einen täglichen Termin ein, der dich auch bei geschlossener Seite erinnert.</p>
+      </div>
+    </details>
+  </div>
+
+  <section class="panel legal" id="legal-impressum" aria-labelledby="imp-h" hidden>
+    <h2 id="imp-h">Impressum</h2>
+    
+    <p><strong>Angaben nach § 5 Digitale-Dienste-Gesetz</strong><br>
+      Andreas Weiß<br>
+      Am Felsenkeller 2<br>
+      75177 Pforzheim</p>
+    <p><strong>Kontakt</strong><br>
+      E-Mail:  weiss.andi@gmx.de<br>
+      </p>
+    <br>
+      </p>
+    <br>
+      </p>
+    <button class="btn" type="button" data-close-legal>Schließen</button>
+  </section>
+
+  <section class="panel legal" id="legal-datenschutz" aria-labelledby="ds-h" hidden>
+    <h2 id="ds-h">Datenschutz</h2>
+    <p class="hint"><strong>Platzhalter und Entwurf.</strong> Er beschreibt den heutigen Stand der App. Bitte ergänzen und rechtlich prüfen lassen. Das ist keine Rechtsberatung.</p>
+    <h3>1. Verantwortlich</h3>
+           Andreas Weiß<br>
+      Am Felsenkeller 2<br>
+      75177 Pforzheim</p>
+    <p><strong>Kontakt</strong><br>
+      E-Mail:  weiss.andi@gmx.de<br>
+      </p>
+    <h3>2. Angaben bei der Anmeldung</h3>
+    <p>Bei der Anmeldung gibst du Vorname, Nachname und E-Mail-Adresse ein. Dazu kommen deine Lieblingsverse und deine Erinnerungszeiten. Diese Angaben werden nur im Browser auf deinem Gerät gespeichert und nicht an einen Server des Anbieters gesendet. Du kannst sie löschen, indem du die Browserdaten dieser Seite löschst.</p>
+    <h3>3. Schriften</h3>
+    <p>Die Seite verwendet die Systemschriften deines Geräts. Es werden keine Schriften von externen Servern geladen.</p>
+    <h3>4. Externe Links</h3>
+    <p>Die Links zur Deutschen Bibelgesellschaft (die-bibel.de) und zum Google Kalender werden nur geöffnet, wenn du sie antippst. Dort gelten die Datenschutzbestimmungen der jeweiligen Anbieter.</p>
+    <h3>5. Hosting und Offline-Speicher</h3>
+    <p>Diese Seite wird bei <span class="ph">GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA</span> bereitgestellt. Beim Aufruf verarbeitet der Hoster technisch notwendige Daten wie die IP-Adresse. Die App legt außerdem ihre eigenen Dateien im Zwischenspeicher deines Geräts ab, damit sie auch ohne Internet startet.</p>
+    <h3>6. Deine Rechte</h3>
+    <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung und Widerspruch sowie das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren. Für Anfragen schreibe mir bitte an weiss.andi@gmx.de.</p>
+    <button class="btn" type="button" data-close-legal>Schließen</button>
+  </section>
+
+  <footer>
+    <span>Text: Lutherbibel 1912, abgeglichen mit der Deutschen Bibelgesellschaft (<a href="https://www.die-bibel.de/bibel/LU12" target="_blank" rel="noopener">die-bibel.de</a>). <span id="vcount"></span> Verse, jeder mit Link zur Bibelstelle. Die HERR-Schreibung folgt dem Druck von 1912.</span>
+    <span class="legal-links"><button class="linkbtn" type="button" data-legal="impressum" aria-expanded="false" aria-controls="legal-impressum">Impressum</button><button class="linkbtn" type="button" data-legal="datenschutz" aria-expanded="false" aria-controls="legal-datenschutz">Datenschutz</button></span>
+    <button class="linkbtn" id="logout" type="button" hidden>Abmelden</button>
+  </footer>
+</main>
+
+<script>
+const MOODS = [
+  { id: "freude", name: "Glücklich und fröhlich", c: "#F5C542", on: "#3B2A00", verses: [
+    ["Dies ist der Tag, den der HERR macht; lasset uns freuen und fröhlich darinnen sein.", "Psalm 118,24", "PSA.118.24"],
+    ["Freuet euch in dem HERRN allewege! Und abermals sage ich: Freuet euch!", "Philipper 4,4", "PHP.4.4"],
+    ["Und bekümmert euch nicht; denn die Freude am HERRN ist eure Stärke.", "Nehemia 8,10", "NEH.8.10"],
+    ["Ein fröhlich Herz macht das Leben lustig; aber ein betrübter Mut vertrocknet das Gebein.", "Sprüche 17,22", "PRO.17.22"],
+    ["Der HERR hat Großes an uns getan; des sind wir fröhlich.", "Psalm 126,3", "PSA.126.3"],
+    ["Du tust mir kund den Weg zum Leben; vor dir ist Freude die Fülle und liebliches Wesen zu deiner Rechten ewiglich.", "Psalm 16,11", "PSA.16.11"],
+    ["Solches rede ich zu euch, auf daß meine Freude in euch bleibe und eure Freude vollkommen werde.", "Johannes 15,11", "JHN.15.11"],
+    ["Dienet dem HERRN mit Freuden; kommt vor sein Angesicht mit Frohlocken!", "Psalm 100,2", "PSA.100.2"],
+    ["Der Gott aber der Hoffnung erfülle euch mit aller Freude und Frieden im Glauben, daß ihr völlige Hoffnung habet durch die Kraft des heiligen Geistes.", "Römer 15,13", "ROM.15.13"],
+    ["Der HERR ist meine Stärke und mein Schild; auf ihn hofft mein Herz, und mir ist geholfen. Und mein Herz ist fröhlich, und ich will ihm danken mit meinem Lied.", "Psalm 28,7", "PSA.28.7"],
+    ["Ihr werdet mit Freuden Wasser schöpfen aus den Heilsbrunnen.", "Jesaja 12,3", "ISA.12.3"],
+    ["Dann wird unser Mund voll Lachens und unsre Zunge voll Rühmens sein. Da wird man sagen unter den Heiden: Der HERR hat Großes an ihnen getan!", "Psalm 126,2", "PSA.126.2"],
+    ["Freuet euch des HERRN und seid fröhlich, ihr Gerechten, und rühmet, alle ihr Frommen.", "Psalm 32,11", "PSA.32.11"],
+    ["Denn der HERR, dein Gott, ist bei dir, ein starker Heiland; er wird sich über dich freuen und dir freundlich sein und vergeben und wird über dir mit Schall fröhlich sein.", "Zephanja 3,17", "ZEP.3.17"],
+    ["Der HERR ist meine Macht und mein Psalm und ist mein Heil.", "Psalm 118,14", "PSA.118.14"]
+  ]},
+  { id: "dank", name: "Dankbarkeit", c: "#9CBF7A", on: "#1F3512", verses: [
+    ["Seid dankbar in allen Dingen; denn das ist der Wille Gottes in Christo Jesu an euch.", "1. Thessalonicher 5,18", "1TH.5.18"],
+    ["Danket dem HERRN; denn er ist freundlich, und seine Güte währet ewiglich.", "Psalm 107,1", "PSA.107.1"],
+    ["Lobe den HERRN, meine Seele, und vergiß nicht, was er dir Gutes getan hat:", "Psalm 103,2", "PSA.103.2"],
+    ["Ich danke dem HERRN von ganzem Herzen und erzähle alle deine Wunder.", "Psalm 9,2", "PSA.9.2"],
+    ["Und alles, was ihr tut mit Worten oder mit Werken, das tut alles in dem Namen des Herrn Jesu, und danket Gott und dem Vater durch ihn.", "Kolosser 3,17", "COL.3.17"],
+    ["Gehet zu seinen Toren ein mit Danken, zu seinen Vorhöfen mit Loben; danket ihm, lobet seinen Namen!", "Psalm 100,4", "PSA.100.4"],
+    ["Lasset uns mit Danken vor sein Angesicht kommen und mit Psalmen ihm jauchzen!", "Psalm 95,2", "PSA.95.2"],
+    ["Sorget nichts! sondern in allen Dingen lasset eure Bitten im Gebet und Flehen mit Danksagung vor Gott kund werden.", "Philipper 4,6", "PHP.4.6"],
+    ["Wie soll ich dem HERRN vergelten alle seine Wohltat, die er an mir tut?", "Psalm 116,12", "PSA.116.12"],
+    ["Gott aber sei Dank für seine unaussprechliche Gabe!", "2. Korinther 9,15", "2CO.9.15"],
+    ["Das ist ein köstlich Ding, dem HERRN danken, und lobsingen deinem Namen, du Höchster.", "Psalm 92,2", "PSA.92.2"],
+    ["Ich will den HERRN loben allezeit; sein Lob soll immerdar in meinem Munde sein.", "Psalm 34,2", "PSA.34.2"],
+    ["Und der Friede Gottes regiere in euren Herzen, zu welchem ihr auch berufen seid in einem Leibe; und seid dankbar!", "Kolosser 3,15", "COL.3.15"],
+    ["Alle gute Gabe und alle vollkommene Gabe kommt von obenherab, von dem Vater des Lichts, bei welchem ist keine Veränderung noch Wechsel des Lichts und der Finsternis.", "Jakobus 1,17", "JAS.1.17"],
+    ["Ich will dich täglich loben und deinen Namen rühmen immer und ewiglich.", "Psalm 145,2", "PSA.145.2"]
+  ]},
+  { id: "angst", name: "Angst", c: "#7DB2C8", on: "#0F2F3D", verses: [
+    ["Fürchte dich nicht, ich bin mit dir; weiche nicht, denn ich bin dein Gott; ich stärke dich, ich helfe dir auch, ich erhalte dich durch die rechte Hand meiner Gerechtigkeit.", "Jesaja 41,10", "ISA.41.10"],
+    ["Und ob ich schon wanderte im finstern Tal, fürchte ich kein Unglück; denn du bist bei mir, dein Stecken und Stab trösten mich.", "Psalm 23,4", "PSA.23.4"],
+    ["Den Frieden lasse ich euch, meinen Frieden gebe ich euch. Nicht gebe ich euch, wie die Welt gibt. Euer Herz erschrecke nicht und fürchte sich nicht.", "Johannes 14,27", "JHN.14.27"],
+    ["Wenn ich mich fürchte, so hoffe ich auf dich.", "Psalm 56,4", "PSA.56.4"],
+    ["Siehe, ich habe dir geboten, daß du getrost und freudig seist. Laß dir nicht grauen und entsetze dich nicht; denn der HERR, dein Gott, ist mit dir in allem, was du tun wirst.", "Josua 1,9", "JOS.1.9"],
+    ["Der HERR ist mein Licht und mein Heil; vor wem sollte ich mich fürchten! Der HERR ist meines Lebens Kraft; vor wem sollte mir grauen!", "Psalm 27,1", "PSA.27.1"],
+    ["Und nun spricht der HERR, der dich geschaffen hat, Jakob, und dich gemacht hat, Israel: Fürchte dich nicht, denn ich habe dich erlöst; ich habe dich bei deinem Namen gerufen; du bist mein!", "Jesaja 43,1", "ISA.43.1"],
+    ["Gott ist unsre Zuversicht und Stärke, eine Hilfe in den großen Nöten, die uns getroffen haben.", "Psalm 46,2", "PSA.46.2"],
+    ["Alle eure Sorge werfet auf ihn; denn er sorget für euch.", "1. Petrus 5,7", "1PE.5.7"],
+    ["Denn Gott hat uns nicht gegeben den Geist der Furcht, sondern der Kraft und der Liebe und der Zucht.", "2. Timotheus 1,7", "2TI.1.7"],
+    ["Solches habe ich mit euch geredet, daß ihr in mir Frieden habet. In der Welt habt ihr Angst; aber seid getrost, ich habe die Welt überwunden.", "Johannes 16,33", "JHN.16.33"],
+    ["Der HERR ist mit mir, darum fürchte ich mich nicht; was können mir Menschen tun?", "Psalm 118,6", "PSA.118.6"],
+    ["Was wollen wir nun hiezu sagen? Ist Gott für uns, wer mag wider uns sein?", "Römer 8,31", "ROM.8.31"],
+    ["Ich liege und schlafe ganz mit Frieden; denn allein du, HERR, hilfst mir, daß ich sicher wohne.", "Psalm 4,9", "PSA.4.9"],
+    ["Denn ich bin der HERR, dein Gott, der deine rechte Hand stärkt und zu dir spricht: Fürchte dich nicht, ich helfe dir!", "Jesaja 41,13", "ISA.41.13"]
+  ]},
+  { id: "wut", name: "Wut", c: "#B5432A", on: "#FFFFFF", verses: [
+    ["Zürnet, und sündiget nicht; lasset die Sonne nicht über eurem Zorn untergehen.", "Epheser 4,26", "EPH.4.26"],
+    ["Eine linde Antwort stillt den Zorn; aber ein hartes Wort richtet Grimm an.", "Sprüche 15,1", "PRO.15.1"],
+    ["Darum, liebe Brüder, ein jeglicher Mensch sei schnell, zu hören, langsam aber, zu reden, und langsam zum Zorn.", "Jakobus 1,19", "JAS.1.19"],
+    ["Steh ab vom Zorn und laß den Grimm; erzürne dich nicht, daß du nicht auch übel tust.", "Psalm 37,8", "PSA.37.8"],
+    ["Ein Geduldiger ist besser denn ein Starker, und der seines Mutes Herr ist, denn der Städte gewinnt.", "Sprüche 16,32", "PRO.16.32"],
+    ["Sei nicht schnelles Gemüts, zu zürnen; denn Zorn ruht im Herzen eines Narren.", "Prediger 7,9", "ECC.7.9"],
+    ["Ein Narr schüttet seinen Geist ganz aus; aber ein Weiser hält an sich.", "Sprüche 29,11", "PRO.29.11"],
+    ["Nun aber leget alles ab von euch: den Zorn, Grimm, Bosheit, Lästerung, schandbare Worte aus eurem Munde.", "Kolosser 3,8", "COL.3.8"],
+    ["Zürnet ihr, so sündiget nicht. Redet mit eurem Herzen auf eurem Lager und harret. (Sela.)", "Psalm 4,5", "PSA.4.5"],
+    ["Wer geduldig ist, der ist ein kluger Mensch, und ist ihm eine Ehre, daß er Untugend überhören kann.", "Sprüche 19,11", "PRO.19.11"],
+    ["Laß dich nicht das Böse überwinden, sondern überwinde das Böse mit Gutem.", "Römer 12,21", "ROM.12.21"],
+    ["Ein Narr zeigt seinen Zorn alsbald; aber wer die Schmach birgt, ist klug.", "Sprüche 12,16", "PRO.12.16"],
+    ["Alle Bitterkeit und Grimm und Zorn und Geschrei und Lästerung sei ferne von euch samt aller Bosheit.", "Epheser 4,31", "EPH.4.31"],
+    ["Ein zorniger Mann richtet Hader an; ein Geduldiger aber stillt den Zank.", "Sprüche 15,18", "PRO.15.18"],
+    ["Und vertrage einer den andern und vergebet euch untereinander, so jemand Klage hat wider den andern; gleichwie Christus euch vergeben hat, also auch ihr.", "Kolosser 3,13", "COL.3.13"]
+  ]},
+  { id: "trauer", name: "Traurigkeit", c: "#5B6CA8", on: "#FFFFFF", verses: [
+    ["Der HERR ist nahe bei denen, die zerbrochnes Herzens sind, und hilft denen, die ein zerschlagen Gemüt haben.", "Psalm 34,19", "PSA.34.19"],
+    ["Denn sein Zorn währt einen Augenblick, und lebenslang seine Gnade; den Abend lang währt das Weinen, aber des Morgens ist Freude.", "Psalm 30,6", "PSA.30.6"],
+    ["Er heilt, die zerbrochnes Herzens sind, und verbindet ihre Schmerzen.", "Psalm 147,3", "PSA.147.3"],
+    ["Die mit Tränen säen, werden mit Freuden ernten.", "Psalm 126,5", "PSA.126.5"],
+    ["Wahrlich, wahrlich ich sage euch: Ihr werdet weinen und heulen, aber die Welt wird sich freuen; ihr aber werdet traurig sein; doch eure Traurigkeit soll in Freude verkehrt werden.", "Johannes 16,20", "JHN.16.20"],
+    ["Was betrübst du dich, meine Seele, und bist so unruhig in mir? Harre auf Gott! denn ich werde ihm noch danken, daß er mir hilft mit seinem Angesicht.", "Psalm 42,6", "PSA.42.6"],
+    ["Wirf dein Anliegen auf den HERRN; der wird dich versorgen und wird den Gerechten nicht ewiglich in Unruhe lassen.", "Psalm 55,23", "PSA.55.23"],
+    ["Kommet her zu mir alle, die ihr mühselig und beladen seid; ich will euch erquicken.", "Matthäus 11,28", "MAT.11.28"],
+    ["Ich will euch trösten, wie einen seine Mutter tröstet; ja ihr sollt an Jerusalem ergötzt werden.", "Jesaja 66,13", "ISA.66.13"],
+    ["Denn ich halte es dafür, daß dieser Zeit Leiden der Herrlichkeit nicht wert sei, die an uns soll offenbart werden.", "Römer 8,18", "ROM.8.18"],
+    ["Alsdann werden die Jungfrauen fröhlich am Reigen sein, dazu die junge Mannschaft und die Alten miteinander. Denn ich will ihr Trauern in Freude verkehren und sie trösten und sie erfreuen nach ihrer Betrübnis.", "Jeremia 31,13", "JER.31.13"],
+    ["Wenn mir gleich Leib und Seele verschmachtet, so bist du doch, Gott, allezeit meines Herzens Trost und mein Teil.", "Psalm 73,26", "PSA.73.26"],
+    ["Meine Seele ist stille zu Gott, der mir hilft.", "Psalm 62,2", "PSA.62.2"],
+    ["Ich hatte viel Bekümmernisse in meinem Herzen; aber deine Tröstungen ergötzten meine Seele.", "Psalm 94,19", "PSA.94.19"],
+    ["Harre des HERRN! Sei getrost und unverzagt und harre des HERRN!", "Psalm 27,14", "PSA.27.14"]
+  ]},
+  { id: "einsam", name: "Einsamkeit", c: "#7B5E96", on: "#FFFFFF", verses: [
+    ["Der HERR aber, der selber vor euch her geht, der wird mit dir sein und wird die Hand nicht abtun noch dich verlassen. Fürchte dich nicht und erschrick nicht.", "5. Mose 31,8", "DEU.31.8"],
+    ["Und siehe, ich bin bei euch alle Tage bis an der Welt Ende.", "Matthäus 28,20", "MAT.28.20"],
+    ["Wende dich zu mir und sei mir gnädig; denn ich bin einsam und elend.", "Psalm 25,16", "PSA.25.16"],
+    ["Denn er hat gesagt: »Ich will dich nicht verlassen noch versäumen.«", "Hebräer 13,5", "HEB.13.5"],
+    ["Es soll dir niemand widerstehen dein Leben lang. Wie ich mit Mose gewesen bin, also will ich auch mit dir sein. Ich will dich nicht verlassen noch von dir weichen.", "Josua 1,5", "JOS.1.5"],
+    ["Denn mein Vater und meine Mutter verlassen mich; aber der HERR nimmt mich auf.", "Psalm 27,10", "PSA.27.10"],
+    ["Kann auch ein Weib ihres Kindleins vergessen, daß sie sich nicht erbarme über den Sohn ihres Leibes? Und ob sie desselben vergäße, so will ich doch dein nicht vergessen.", "Jesaja 49,15", "ISA.49.15"],
+    ["Ich will euch nicht Waisen lassen; ich komme zu euch.", "Johannes 14,18", "JHN.14.18"],
+    ["Ja, ich will euch tragen bis ins Alter und bis ihr grau werdet. Ich will es tun, ich will heben und tragen und erretten.", "Jesaja 46,4", "ISA.46.4"],
+    ["Und siehe, ich bin mit dir und will dich behüten, wo du hin ziehst, und will dich wieder herbringen in dies Land. Denn ich will dich nicht lassen, bis daß ich tue alles, was ich dir geredet habe.", "1. Mose 28,15", "GEN.28.15"],
+    ["Ein treuer Freund liebt mehr und steht fester bei denn ein Bruder.", "Sprüche 18,24", "PRO.18.24"],
+    ["Denn so du durch Wasser gehst, will ich bei dir sein, daß dich die Ströme nicht sollen ersäufen; und so du ins Feuer gehst, sollst du nicht brennen, und die Flamme soll dich nicht versengen.", "Jesaja 43,2", "ISA.43.2"],
+    ["Seid getrost und unverzagt, fürchtet euch nicht und laßt euch nicht vor ihnen grauen; denn der HERR, dein Gott, wird selber mit dir wandeln und wird die Hand nicht abtun noch dich verlassen.", "5. Mose 31,6", "DEU.31.6"],
+    ["Siehe, es kommt die Stunde und ist schon gekommen, daß ihr zerstreut werdet, ein jeglicher in das Seine, und mich allein lasset. Aber ich bin nicht allein; denn der Vater ist bei mir.", "Johannes 16,32", "JHN.16.32"],
+    ["Ich habe den HERRN allezeit vor Augen; denn er ist mir zur Rechten, so werde ich fest bleiben.", "Psalm 16,8", "PSA.16.8"]
+  ]},
+  { id: "grief", name: "Trauer", c: "#5E6B73", on: "#FFFFFF", verses: [
+    ["Selig sind, die da Leid tragen; denn sie sollen getröstet werden.", "Matthäus 5,4", "MAT.5.4"],
+    ["Und Gott wird abwischen alle Tränen von ihren Augen, und der Tod wird nicht mehr sein, noch Leid noch Geschrei noch Schmerz wird mehr sein; denn das Erste ist vergangen.", "Offenbarung 21,4", "REV.21.4"],
+    ["Jesus spricht zu ihr: Ich bin die Auferstehung und das Leben. Wer an mich glaubet, der wird leben, ob er gleich stürbe; und wer da lebet und glaubet an mich, der wird nimmermehr sterben. Glaubst du das?", "Johannes 11,25–26", "JHN.11.25"],
+    ["Wir wollen euch aber, liebe Brüder, nicht verhalten von denen, die da schlafen, auf daß ihr nicht traurig seid wie die andern, die keine Hoffnung haben.", "1. Thessalonicher 4,13", "1TH.4.13"],
+    ["Er wird den Tod verschlingen ewiglich; und der Herr HERR wird die Tränen von allen Angesichtern abwischen und wird aufheben die Schmach seines Volks in allen Landen; denn der HERR hat's gesagt.", "Jesaja 25,8", "ISA.25.8"],
+    ["Der Tod seiner Heiligen ist wertgehalten vor dem HERRN.", "Psalm 116,15", "PSA.116.15"],
+    ["In meines Vaters Hause sind viele Wohnungen. Wenn's nicht so wäre, so wollte ich zu euch sagen: Ich gehe hin, euch die Stätte zu bereiten.", "Johannes 14,2", "JHN.14.2"],
+    ["Leben wir, so leben wir dem Herrn; sterben wir, so sterben wir dem Herrn. Darum, wir leben oder sterben, so sind wir des Herrn.", "Römer 14,8", "ROM.14.8"],
+    ["Und ich hörte eine Stimme vom Himmel zu mir sagen: Schreibe: Selig sind die Toten, die in dem Herrn sterben von nun an. Ja, der Geist spricht, daß sie ruhen von ihrer Arbeit; denn ihre Werke folgen ihnen nach.", "Offenbarung 14,13", "REV.14.13"],
+    ["Denn ich bin gewiß, daß weder Tod noch Leben, weder Engel noch Fürstentümer noch Gewalten, weder Gegenwärtiges noch Zukünftiges, weder Hohes noch Tiefes noch keine andere Kreatur mag uns scheiden von der Liebe Gottes, die in Christo Jesu ist, unserm Herrn.", "Römer 8,38–39", "ROM.8.38"],
+    ["Und ihr habt auch nun Traurigkeit; aber ich will euch wiedersehen, und euer Herz soll sich freuen, und eure Freude soll niemand von euch nehmen.", "Johannes 16,22", "JHN.16.22"],
+    ["Wir wissen aber, so unser irdisch Haus dieser Hütte zerbrochen wird, daß wir einen Bau haben, von Gott erbauet, ein Haus, nicht mit Händen gemacht, das ewig ist, im Himmel.", "2. Korinther 5,1", "2CO.5.1"]
+  ]},
+  { id: "intercession", name: "Fürbitte", c: "#36807C", on: "#FFFFFF", verses: [
+    ["So ermahne ich nun, daß man vor allen Dingen zuerst tue Bitte, Gebet, Fürbitte und Danksagung für alle Menschen, für die Könige und für alle Obrigkeit, auf daß wir ein ruhiges und stilles Leben führen mögen in aller Gottseligkeit und Ehrbarkeit.", "1. Timotheus 2,1", "1TI.2.1"],
+    ["Bekenne einer dem andern seine Sünden und betet füreinander, daß ihr gesund werdet. Des Gerechten Gebet vermag viel, wenn es ernstlich ist.", "Jakobus 5,16", "JAS.5.16"],
+    ["Und betet stets in allem Anliegen mit Bitten und Flehen im Geist, und wachet dazu mit allem Anhalten und Flehen für alle Heiligen.", "Epheser 6,18", "EPH.6.18"],
+    ["Es sei aber auch ferne von mir, mich also an dem HERRN zu versündigen, daß ich sollte ablassen, für euch zu beten und euch zu lehren den guten und richtigen Weg.", "1. Samuel 12,23", "1SA.12.23"],
+    ["Und der HERR wandte das Gefängnis Hiobs, da er bat für seine Freunde. Und der HERR gab Hiob zwiefältig so viel, als er gehabt hatte.", "Hiob 42,10", "JOB.42.10"],
+    ["Liebe Brüder, betet für uns.", "1. Thessalonicher 5,25", "1TH.5.25"],
+    ["Wer will verdammen? Christus ist hier, der gestorben ist, ja vielmehr, der auch auferwecket ist, welcher ist zur Rechten Gottes und vertritt uns.", "Römer 8,34", "ROM.8.34"],
+    ["Und Petrus ward zwar im Gefängnis gehalten; aber die Gemeinde betete ohne Aufhören für ihn zu Gott.", "Apostelgeschichte 12,5", "ACT.12.5"],
+    ["Suchet der Stadt Bestes, dahin ich euch habe lassen wegführen, und betet für sie zum HERRN; denn wenn's ihr wohl geht, so geht's euch auch wohl.", "Jeremia 29,7", "JER.29.7"],
+    ["Derhalben auch wir von dem Tage an, da wir's gehört haben, hören wir nicht auf, für euch zu beten und zu bitten, daß ihr erfüllet werdet mit Erkenntnis seines Willens in allerlei geistlicher Weisheit und Verständnis.", "Kolosser 1,9", "COL.1.9"],
+    ["durch Hilfe auch eurer Fürbitte für uns, auf daß über uns für die Gabe, die uns gegeben ist, durch viel Personen viel Dank geschehe.", "2. Korinther 1,11", "2CO.1.11"],
+    ["Es grüßt euch Epaphras, der von den Euren ist, ein Knecht Christi, und allezeit ringt für euch mit Gebeten, auf daß ihr bestehet vollkommen und erfüllt mit allem Willen Gottes.", "Kolosser 4,12", "COL.4.12"]
+  ]},
+  { id: "partner", name: "Partnerschaft", c: "#C2557A", on: "#FFFFFF", verses: [
+    ["Und Gott der HERR sprach: Es ist nicht gut, daß der Mensch allein sei; ich will ihm eine Gehilfin machen, die um ihn sei.", "1. Mose 2,18", "GEN.2.18"],
+    ["Wer eine Ehefrau findet, der findet etwas Gutes und kann guter Dinge sein im HERRN.", "Sprüche 18,22", "PRO.18.22"],
+    ["Habe deine Lust am HERRN; der wird dir geben, was dein Herz wünschet.", "Psalm 37,4", "PSA.37.4"],
+    ["Befiehl dem HERRN deine Wege und hoffe auf ihn; er wird's wohl machen.", "Psalm 37,5", "PSA.37.5"],
+    ["Verlaß dich auf den HERRN von ganzem Herzen und verlaß dich nicht auf deinen Verstand; sondern gedenke an ihn in allen deinen Wegen, so wird er dich recht führen.", "Sprüche 3,5–6", "PRO.3.5"],
+    ["Ich will dich unterweisen und dir den Weg zeigen, den du wandeln sollst; ich will dich mit meinen Augen leiten.", "Psalm 32,8", "PSA.32.8"],
+    ["So aber jemand unter euch Weisheit mangelt, der bitte Gott, der da gibt einfältig jedermann und rücket's niemand auf, so wird sie ihm gegeben werden.", "Jakobus 1,5", "JAS.1.5"],
+    ["Laß mich frühe hören deine Gnade; denn ich hoffe auf dich. Tue mir kund den Weg, darauf ich gehen soll; denn mich verlangt nach dir.", "Psalm 143,8", "PSA.143.8"],
+    ["Des Menschen Herz erdenkt sich seinen Weg; aber der HERR allein gibt, daß er fortgehe.", "Sprüche 16,9", "PRO.16.9"],
+    ["Über alles aber ziehet an die Liebe, die da ist das Band der Vollkommenheit.", "Kolosser 3,14", "COL.3.14"],
+    ["Sie verträgt alles, sie glaubet alles, sie hoffet alles, sie duldet alles.", "1. Korinther 13,7", "1CO.13.7"],
+    ["So sind sie nun nicht zwei, sondern ein Fleisch. Was nun Gott zusammengefügt hat, das soll der Mensch nicht scheiden.", "Matthäus 19,6", "MAT.19.6"]
+  ]}
+];
+
+const $ = id => document.getElementById(id);
+
+/* Speicher: nur dieser Browser, mit Rückfall auf den Arbeitsspeicher */
+const KEY = "bvs-v1";
+let mem = null;
+const defRem = () => ({ morning: { on: true, time: "07:00", last: "" }, evening: { on: true, time: "21:00", last: "" } });
+function loadState() { try { const r = localStorage.getItem(KEY); if (r) return JSON.parse(r); } catch (e) {} return mem; }
+const saved = loadState() || {};
+const state = { profile: saved.profile || null, favs: Array.isArray(saved.favs) ? saved.favs : [], rem: defRem() };
+["morning", "evening"].forEach(k => { if (saved.rem && saved.rem[k]) Object.assign(state.rem[k], saved.rem[k]); });
+function save() { mem = state; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+const BYREF = {};
+MOODS.forEach(m => m.verses.forEach(v => { BYREF[v[1]] = { t: v[0], ref: v[1], code: v[2], mood: m }; }));
+$("vcount").textContent = MOODS.reduce((n, m) => n + m.verses.length, 0);
+const srcUrl = code => "https://www.die-bibel.de/bibel/LU12/" + code;
+
+/* Begrüßung nach Tageszeit */
+function partOfDay(d) {
+  const h = d.getHours();
+  if (h >= 5 && h < 11) return { hello: "Guten Morgen", when: "heute Morgen" };
+  if (h >= 11 && h < 17) return { hello: "Guten Tag", when: "heute" };
+  if (h >= 17) return { hello: "Guten Abend", when: "heute Abend" };
+  return { hello: "Guten Abend", when: "gerade" };
+}
+function renderGreeting() {
+  if (!state.profile) return;
+  const p = partOfDay(new Date());
+  $("greet").textContent = p.hello + " " + state.profile.first;
+  $("ask").textContent = "Wie geht es Dir?";
+}
+
+/* Anmeldung */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+$("login-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const first = $("first").value.trim(), last = $("last").value.trim(), email = $("email").value.trim();
+  const err = $("login-error");
+  if (!first) { err.textContent = "Bitte gib deinen Vornamen ein."; $("first").focus(); return; }
+  if (!last) { err.textContent = "Bitte gib deinen Nachnamen ein."; $("last").focus(); return; }
+  if (!EMAIL_RE.test(email)) { err.textContent = "Bitte gib eine gültige E-Mail-Adresse ein, zum Beispiel name@beispiel.de."; $("email").focus(); return; }
+  err.textContent = "";
+  state.profile = { first, last, email };
+  save();
+  showApp();
+});
+$("logout").addEventListener("click", () => {
+  state.profile = null; save(); current = null;
+  $("first").value = ""; $("last").value = ""; $("email").value = "";
+  showApp();
+});
+function showApp() {
+  const on = !!state.profile;
+  $("login").hidden = on; $("app").hidden = !on; $("logout").hidden = !on;
+  if (on) { renderGreeting(); render(false); renderFavs(); renderReminders(); checkReminders(); }
+}
+
+/* Gefühls-Buttons und Vers-Karte */
+const idx = {};
+MOODS.forEach(m => idx[m.id] = 0);
+let current = null;
+const nav = $("moods");
+MOODS.forEach(m => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "mood"; b.textContent = m.name; b.dataset.id = m.id;
+  b.style.setProperty("--c", m.c); b.style.setProperty("--on", m.on);
+  b.addEventListener("click", () => select(m));
+  nav.appendChild(b);
+});
+function render(animate) {
+  const card = $("card");
+  if (!current) {
+    card.hidden = true;
+    document.querySelectorAll(".mood").forEach(b => b.setAttribute("aria-pressed", "false"));
+    return;
+  }
+  card.hidden = false;
+  const m = current, v = m.verses[idx[m.id]];
+  card.style.setProperty("--c", m.c); card.style.setProperty("--on", m.on);
+  $("mood-name").textContent = m.name;
+  $("text").textContent = "„" + v[0] + "“";
+  $("ref").textContent = v[1];
+  $("src").href = srcUrl(v[2]);
+  const fav = state.favs.includes(v[1]);
+  $("heart").setAttribute("aria-pressed", String(fav));
+  $("heart-label").textContent = fav ? "Gemerkt" : "Gefällt mir";
+  document.querySelectorAll(".mood").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.id === m.id)));
+  if (animate) { const body = $("body"); body.classList.remove("fade"); void body.offsetWidth; body.classList.add("fade"); }
+}
+function pick(m) { const n = m.verses.length; let i; do { i = Math.floor(Math.random() * n); } while (n > 1 && i === idx[m.id]); idx[m.id] = i; }
+function select(m) {
+  if (current === m) { current = null; render(false); return; }
+  const first = !current;
+  current = m; pick(m); render(true);
+  if (first) { try { $("card").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" }); } catch (e) {} }
+}
+$("next").addEventListener("click", () => { pick(current); render(true); });
+$("copy").addEventListener("click", async () => {
+  const v = current.verses[idx[current.id]], btn = $("copy");
+  const t = "„" + v[0] + "“ (" + v[1] + ")";
+  try { await navigator.clipboard.writeText(t); btn.textContent = "Kopiert"; }
+  catch (e) { btn.textContent = "Bitte Text markieren"; }
+  setTimeout(() => btn.textContent = "Vers kopieren", 1800);
+});
+
+/* Herz für Lieblingsverse */
+$("heart").addEventListener("click", () => {
+  const ref = current.verses[idx[current.id]][1];
+  const i = state.favs.indexOf(ref);
+  if (i >= 0) state.favs.splice(i, 1); else state.favs.push(ref);
+  save(); render(false); renderFavs();
+});
+function renderFavs() {
+  const ul = $("favs"); ul.textContent = "";
+  const list = state.favs.map(r => BYREF[r]).filter(Boolean);
+  $("fav-empty").hidden = list.length > 0;
+  $("fav-count").textContent = list.length ? " (" + list.length + ")" : "";
+  list.forEach(v => {
+    const li = document.createElement("li"); li.className = "fav";
+    const p = document.createElement("p"); p.textContent = "„" + v.t + "“";
+    const rm = document.createElement("button"); rm.type = "button"; rm.className = "unheart";
+    rm.setAttribute("aria-label", "Herz entfernen: " + v.ref);
+    rm.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.7 4.5 6.4 4.5c2 0 3.5 1.1 4.3 2.4h2.6c.8-1.3 2.3-2.4 4.3-2.4 3.7 0 5.6 3.8 4 7.3C19.5 16.4 12 21 12 21z"/></svg>';
+    rm.addEventListener("click", () => { state.favs = state.favs.filter(r => r !== v.ref); save(); render(false); renderFavs(); });
+    const meta = document.createElement("div"); meta.className = "meta";
+    const ref = document.createElement("span"); ref.textContent = v.ref;
+    const a = document.createElement("a"); a.href = srcUrl(v.code); a.target = "_blank"; a.rel = "noopener"; a.textContent = "Nachlesen";
+    meta.append(ref, a);
+    li.append(p, rm, meta); ul.appendChild(li);
+  });
+}
+
+/* Erinnerungen */
+const REMS = [
+  { id: "morning", hello: "Guten Morgen", tail: "Zeit für dein Bibelwort zum Tagesbeginn." },
+  { id: "evening", hello: "Guten Abend", tail: "Zeit für dein Bibelwort zum Tagesende." }
+];
+function pad(n) { return String(n).padStart(2, "0"); }
+function calLink(time) {
+  const [h, m] = time.split(":").map(Number);
+  const d = new Date(); d.setHours(h, m, 0, 0);
+  if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1);
+  const e = new Date(d.getTime() + 15 * 60000);
+  const f = x => x.getFullYear() + pad(x.getMonth() + 1) + pad(x.getDate()) + "T" + pad(x.getHours()) + pad(x.getMinutes()) + "00";
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("Bibelvers für die Seele") +
+    "&details=" + encodeURIComponent("Zeit für dein Bibelwort.") + "&dates=" + f(d) + "/" + f(e) + "&recur=" + encodeURIComponent("RRULE:FREQ=DAILY");
+}
+function renderReminders() {
+  REMS.forEach(r => {
+    const s = state.rem[r.id];
+    $("rem-" + r.id + "-on").checked = s.on;
+    $("rem-" + r.id + "-time").value = s.time;
+    $("rem-" + r.id + "-cal").href = calLink(s.time);
+  });
+  updateNotifStatus();
+}
+REMS.forEach(r => {
+  $("rem-" + r.id + "-on").addEventListener("change", e => { state.rem[r.id].on = e.target.checked; save(); });
+  $("rem-" + r.id + "-time").addEventListener("change", e => {
+    if (!e.target.value) { e.target.value = state.rem[r.id].time; return; }
+    state.rem[r.id].time = e.target.value; state.rem[r.id].last = "";
+    $("rem-" + r.id + "-cal").href = calLink(e.target.value); save(); checkReminders();
+  });
+});
+function updateNotifStatus() {
+  const el = $("notif-status"), btn = $("notif-btn");
+  if (typeof Notification === "undefined") { el.textContent = "Dieser Browser bietet hier keine Hinweise an."; btn.hidden = true; return; }
+  if (Notification.permission === "granted") { el.textContent = "Hinweise sind erlaubt."; btn.hidden = true; }
+  else if (Notification.permission === "denied") { el.textContent = "Hinweise sind blockiert. Es erscheint nur das Banner auf der Seite."; btn.hidden = true; }
+  else { el.textContent = ""; btn.hidden = false; }
+}
+$("notif-btn").addEventListener("click", async () => {
+  try { await Notification.requestPermission(); } catch (e) {}
+  updateNotifStatus();
+});
+$("remind-close").addEventListener("click", () => { $("remind").hidden = true; });
+function today() { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+function checkReminders() {
+  if (!state.profile) return;
+  const now = new Date(), mins = now.getHours() * 60 + now.getMinutes();
+  REMS.forEach(r => {
+    const s = state.rem[r.id]; if (!s.on) return;
+    const [h, m] = s.time.split(":").map(Number), at = h * 60 + m;
+    if (mins >= at && mins - at < 60 && s.last !== today()) {
+      s.last = today(); save();
+      const msg = r.hello + " " + state.profile.first + ". " + r.tail;
+      $("remind-text").textContent = msg; $("remind").hidden = false;
+      try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("Bibelverse für die Seele", { body: msg }); } catch (e) {}
+    }
+  });
+}
+function showLegal(which) {
+  ["impressum", "datenschutz"].forEach(k => {
+    const open = k === which;
+    $("legal-" + k).hidden = !open;
+    document.querySelector('[data-legal="' + k + '"]').setAttribute("aria-expanded", String(open));
+  });
+  if (which) $("legal-" + which).scrollIntoView({ block: "nearest" });
+}
+document.querySelectorAll("[data-legal]").forEach(b => b.addEventListener("click", () => showLegal($("legal-" + b.dataset.legal).hidden ? b.dataset.legal : null)));
+document.querySelectorAll("[data-close-legal]").forEach(b => b.addEventListener("click", () => showLegal(null)));
+setInterval(() => { renderGreeting(); checkReminders(); }, 30000);
+showApp();
+if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(function () {}); }
+</script>
+</body>
+</html>

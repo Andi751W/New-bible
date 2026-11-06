@@ -1,0 +1,41 @@
+Bibelverse für die Seele - installierbare Web-App
+==================================================
+
+INHALT
+  index.html               die App
+  manifest.webmanifest     Name, Farben und Symbole für die Installation
+  sw.js                    Offline-Zwischenspeicher
+  apple-touch-icon.png     Symbol für das iPhone
+  icons/                   Symbole für Android und Computer
+
+1. HOCHLADEN (einmalig)
+  Lade alle Dateien und den Ordner "icons" unverändert auf einen Webhoster hoch.
+  Die Adresse muss mit https:// beginnen, sonst lässt sich die App nicht installieren.
+  Einfache Möglichkeiten sind zum Beispiel GitHub Pages oder Netlify.
+  Die Datei index.html muss im Hauptordner liegen.
+
+2. INSTALLIEREN (jeder Nutzer selbst)
+  iPhone (Safari):   Seite öffnen > Teilen > "Zum Home-Bildschirm"
+  Android (Chrome):  Seite öffnen > Menü (drei Punkte) > "App installieren"
+                     oder "Zum Startbildschirm hinzufügen"
+  Danach erscheint das Kreuz-Symbol auf dem Display und die App startet ohne Browserleiste.
+
+3. VOR DER VERÖFFENTLICHUNG
+  Impressum und Datenschutz sind Platzhalter. Öffne index.html in einem Texteditor
+  und ersetze alle Texte in eckigen Klammern (gelb markiert in der App):
+  suche nach  class="ph"
+  Lass beide Texte rechtlich prüfen. Das ist keine Rechtsberatung.
+
+4. ÄNDERUNGEN SPÄTER
+  Wenn du eine Datei änderst, erhöhe in sw.js die Versionsnummer
+  (const CACHE = "bibelverse-v1" -> "bibelverse-v2"), sonst sehen Nutzer
+  weiter die alte Fassung.
+
+HINWEISE
+  - Name, E-Mail, Lieblingsverse und Erinnerungszeiten bleiben nur im Browser des Geräts.
+  - Die App funktioniert nach dem ersten Öffnen auch ohne Internet. Nur die Links zur
+    Bibelgesellschaft und zum Kalender brauchen eine Verbindung.
+  - Erinnerungen erscheinen nur, solange die App geöffnet ist. Feste Erinnerungen
+    um 7 und 21 Uhr gehen über den Kalender-Link in der App.
+  - Das Paket wurde auf einem lokalen Testserver mit Offline-Start geprüft, aber
+    nicht auf echten Geräten. Teste die Installation auf iPhone und Android.
